@@ -16,21 +16,7 @@ class Parser(private val reader: Reader) {
 
     private val buffer: Deque<Int> = LinkedList<Int>()
 
-    fun tokenize(): Term {
-        var c = readSkippingWhitespace()
-        val terms = mutableListOf<Term>()
-        while (c != -1) {
-            val term = when (c.toChar()) {
-                '(' -> readTerm().simplify()
-                '\\' -> readLambda().simplify()
-                'λ' -> readLambda().simplify()
-                else -> throw ParsingException("Expected '(', '\\' or 'λ' but found '${c.toChar()}'")
-            }
-            terms.add(term)
-            c = readSkippingWhitespace()
-        }
-        return Group(terms).simplify()
-    }
+    fun tokenize(): Term = readTerm { it == -1 }
 
     private fun readSkippingWhitespace(): Int {
         var c = readNext()
@@ -40,10 +26,10 @@ class Parser(private val reader: Reader) {
         return c
     }
 
-    private fun readTerm(): Term {
+    private fun readTerm(endingPredicate: (Int) -> Boolean = this::isDelimiter): Term {
         val blockTerms = mutableListOf<Term>()
         var c = readSkippingWhitespace()
-        termLoop@while (!isDelimiter(c)) {
+        termLoop@while (!endingPredicate(c)) {
             when (c) {
                 '('.toInt() -> blockTerms.add(readTerm().simplify())
                 '\\'.toInt(),

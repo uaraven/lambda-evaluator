@@ -5,8 +5,22 @@ import org.junit.Test
 
 import org.junit.Assert.*
 import java.io.StringReader
+import kotlin.math.exp
 
 class TokenizerTest {
+
+    @Test
+    fun testVariable() {
+        val reader = StringReader("xy")
+        val tokenizer = Parser(reader)
+
+        val term = tokenizer.tokenize()
+        val expected = Group
+            .of(Variable('x'), Variable('y')).simplify()
+
+        assertThat(term, equalTo(expected))
+    }
+
 
     @Test
     fun testSimpleLambda() {
@@ -46,5 +60,20 @@ class TokenizerTest {
         )
 
         assertThat(term, equalTo(expected as Term))
+    }
+
+    @Test
+    fun shouldParseYCombinator() {
+        val reader = StringReader("λg.(λx.g(xx))(λx.g(xx))")
+        val tokens = Parser(reader).tokenize()
+
+        val lxg = Lambda.of(Variable('x')).`as`(
+            Group.of(Variable('g'), Group.of(Variable('x'), Variable('x')))
+        )
+
+        val expected =
+            Group.of(Lambda.of(Variable('g')).`as`(Group.of(lxg)), Group.of(lxg)) as Term
+
+        assertThat(tokens, equalTo(expected))
     }
 }

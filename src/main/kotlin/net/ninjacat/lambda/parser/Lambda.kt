@@ -16,6 +16,10 @@ data class Lambda(private val params: List<Variable>, private val body: List<Ter
 
     override fun toString(): String = repr.value
 
+    /**
+     * Curries the lambda with multiple parameters,
+     * i.e. λxy.xayb -> λx.λy.xayb
+     */
     override fun simplify(): Lambda {
         return if (params.size > 1) {
             val reversed = params.reversed()
@@ -47,6 +51,7 @@ data class Group(private val terms: List<Term>) : Term() {
 
     override fun toString(): String = repr.value
 
+    // If group contains only one parameter, unwraps it
     override fun simplify(): Term = if (terms.size == 1) terms.first() else this
 
     companion object {

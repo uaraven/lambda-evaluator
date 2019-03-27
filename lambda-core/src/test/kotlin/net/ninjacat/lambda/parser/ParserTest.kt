@@ -1,11 +1,10 @@
 package net.ninjacat.lambda.parser
 
+import net.ninjacat.lambda.evaluator.*
 import org.hamcrest.Matchers.equalTo
 import org.junit.Test
 
 import org.junit.Assert.*
-import java.io.StringReader
-import kotlin.math.exp
 
 class ParserTest {
 
@@ -32,7 +31,10 @@ class ParserTest {
     @Test
     fun testVariableGroup() {
         val term = Parser.parse("(xy)")
-        val expected = Group.of(Variable("x"), Variable("y")) as Term
+        val expected = Group.of(
+            Variable("x"),
+            Variable("y")
+        ) as Term
 
         assertThat(term, equalTo(expected))
     }
@@ -40,7 +42,10 @@ class ParserTest {
     @Test
     fun testVariableApplication() {
         val term = Parser.parse("x(y)")
-        val expected = Application(Variable("x"), Variable("y")) as Term
+        val expected = Application(
+            Variable("x"),
+            Variable("y")
+        ) as Term
 
         assertThat(term, equalTo(expected))
     }

@@ -1,5 +1,6 @@
 package net.ninjacat.lambda.parser
 
+import net.ninjacat.lambda.evaluator.*
 import java.io.StringReader
 import java.util.*
 

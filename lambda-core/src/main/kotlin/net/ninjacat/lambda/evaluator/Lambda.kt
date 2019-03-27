@@ -1,15 +1,17 @@
-package net.ninjacat.lambda.parser
+package net.ninjacat.lambda.evaluator
 
-
-class Context
 
 sealed class Term {
     open fun simplify(): Term = this
-    open fun evaluate(context: Context): Term = this
+    open fun alphaConversion(): Term = this
+    open fun betaReduction(context: Context): Term = this
+    open fun etaReduction(context: Context): Term = this
+
+    open fun listVariables() = sequenceOf<Variable>()
 }
 
 
-data class Variable(private val name: String) : Term() {
+data class Variable(val name: String) : Term() {
     override fun toString(): String = name
 }
 
@@ -17,11 +19,24 @@ data class Assignment(val variable: Variable, val value: Term) : Term()
 
 
 data class Lambda(private val params: List<Variable>, private val body: Term) : Term() {
+    private val paramSet = params.map { it.name }.toSet()
+
     private val repr = lazy {
         "λ${params.joinToString("")}.$body"
     }
 
     override fun toString(): String = repr.value
+
+    fun freeVariables() = body.listVariables()
+        .filterNot { paramSet.contains(it.name) }
+
+    fun boundVariables() = body.listVariables()
+        .filter { paramSet.contains(it.name) }
+
+//    override fun alphaConversion(): Term {
+//        val listToChange = boundVariables()
+//
+//    }
 
     /**
      * Curries the lambda with multiple parameters,
@@ -32,8 +47,8 @@ data class Lambda(private val params: List<Variable>, private val body: Term) : 
             val reversed = params.reversed()
             reversed
                 .drop(1)
-                .fold(Lambda.of(reversed.first()).`as`(body)) { acc, `var` ->
-                    Lambda.of(`var`).`as`(acc)
+                .fold(of(reversed.first()).`as`(body)) { acc, `var` ->
+                    of(`var`).`as`(acc)
                 }
         } else {
             this
@@ -43,9 +58,15 @@ data class Lambda(private val params: List<Variable>, private val body: Term) : 
     companion object {
         data class LambdaBuilder(val params: List<Variable>) {
             fun `as`(vararg body: Term) =
-                Lambda(params, Group.of(body.toList()).simplify())
+                Lambda(
+                    params,
+                    Group.of(body.toList()).simplify()
+                )
 
-            fun `as`(body: List<Term>) = Lambda(params, Group.of(body).simplify())
+            fun `as`(body: List<Term>) = Lambda(
+                params,
+                Group.of(body).simplify()
+            )
         }
 
         fun of(vararg params: Variable) =
@@ -61,6 +82,8 @@ data class Group(private val terms: List<Term>) : Term() {
     private val repr = lazy {
         "(${terms.joinToString("") { "$it" }})"
     }
+
+    override fun listVariables(): Sequence<Variable> = terms.flatMap { it.listVariables().asIterable() }.toSet().asSequence()
 
     override fun toString(): String = repr.value
 

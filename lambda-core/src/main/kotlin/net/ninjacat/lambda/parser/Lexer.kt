@@ -19,7 +19,7 @@ data class Token(val type: TokenType, val value: String) {
 
     companion object {
         val lambda = Token(TokenType.LAMBDA, "λ")
-        val dot = Token(TokenType.DOT, ".")
+        val dot = Token(TokenType.DOT, "")
         val openParens = Token(TokenType.OPEN_PARENS, "(")
         val closeParens = Token(TokenType.CLOSE_PARENS, ")")
         val assign = Token(TokenType.ASSIGN, ":=")

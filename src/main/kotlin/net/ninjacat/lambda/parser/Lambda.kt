@@ -9,11 +9,11 @@ sealed class Term {
 }
 
 
-data class Variable(private val name: Char) : Term() {
-    override fun toString(): String = name.toString()
+data class Variable(private val name: String) : Term() {
+    override fun toString(): String = name
 }
 
-data class Assignment(val variable: Variable, val value: Term): Term()
+data class Assignment(val variable: Variable, val value: Term) : Term()
 
 
 data class Lambda(private val params: List<Variable>, private val body: Term) : Term() {
@@ -53,12 +53,14 @@ data class Lambda(private val params: List<Variable>, private val body: Term) : 
     }
 }
 
-data class Application(val func: Term, val params: Term): Term() {
-    override fun toString(): String = "($func)($params)"
+data class Application(val func: Term, val params: Term) : Term() {
+    override fun toString(): String = "$func$params"
 }
 
 data class Group(private val terms: List<Term>) : Term() {
-    private val repr = lazy { "(${terms.joinToString("") { "$it" }})" }
+    private val repr = lazy {
+        "(${terms.joinToString("") { "$it" }})"
+    }
 
     override fun toString(): String = repr.value
 
@@ -67,7 +69,7 @@ data class Group(private val terms: List<Term>) : Term() {
 
     companion object {
         fun of(vararg term: Term) = Group(term.toList())
-        fun of(vars :List<Term>) = Group(vars)
+        fun of(vars: List<Term>) = Group(vars)
     }
 
     /**

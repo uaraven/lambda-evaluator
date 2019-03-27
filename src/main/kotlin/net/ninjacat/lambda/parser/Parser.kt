@@ -1,111 +1,117 @@
 package net.ninjacat.lambda.parser
 
-import java.io.Reader
+import java.io.StringReader
 import java.util.*
 
 /**
  * λ calculus parser.
  */
-class Parser(private val reader: Reader) {
+class Parser(tokens: Sequence<Token>) {
 
-    private val buffer: Deque<Int> = LinkedList<Int>()
+    private val reader = tokens.iterator()
+    private val buffer: Deque<Token> = LinkedList<Token>()
 
-    fun parse(): Term = parseTerm()
+    fun parse(): Term = parseTerm(this::nonEof)
 
     /**
      * term ::= assignment | application | LAMBDA var+ DOT term
      */
-    private fun parseTerm(final: Int = -1): Term {
-        var t = readSkippingWhitespace()
-        if (isLambda(t)) {
-            t = readSkippingWhitespace()
+    private fun parseTerm(shouldAccept: (Token) -> Boolean): Term {
+        var t = readNext()
+        if (t.type == TokenType.LAMBDA) {
+            t = readNext()
             val params = mutableListOf<Variable>()
-            while (t != final && t != '.'.toInt()) {
-                if (t.toChar() in 'a'..'z') {
-                    params.add(Variable(t.toChar()))
+            while (shouldAccept(t) && t.type != TokenType.DOT) {
+                if (t.type == TokenType.VARIABLE) {
+                    params.add(Variable(t.value))
                 } else {
-                    throw ParsingException("Expected variable name, but got '${t.toChar()}'")
+                    throw ParsingException("Expected variable name, but got $t")
                 }
-                t = readSkippingWhitespace()
+                t = readNext()
             }
-            val body = parseTerm(-1)
+            val body = parseTerm(this::lambdaBody).simplify()
             return Lambda(params, body).simplify()
         } else {
-            val next = readSkippingWhitespace()
+            val next = readNext()
             putBack(next)
-            if (next.toChar() == '=') {
-                putBack(t)
-                return parseAssignment()
-            } else {
-                putBack(t)
-                return parseApplication(final)
+            putBack(t)
+            return when {
+                next.type == TokenType.ASSIGN -> parseAssignment()
+                else -> parseApplication(shouldAccept).simplify()
             }
         }
+    }
+
+    private fun parseVarGroup(): Term {
+        val groupTerms = mutableListOf<Term>()
+        var next = readNext()
+        while (next.type == TokenType.VARIABLE) {
+            groupTerms.add(Variable(next.value))
+            next = readNext()
+        }
+        putBack(next)
+        return Group.of(groupTerms)
     }
 
     /**
      * application ::= atom | application'
      * application' ::= atom application' | empty
      */
-    private fun parseApplication(final: Int = -1): Term {
-        var lhs = parseAtom()
+    private fun parseApplication(shouldAccept: (Token) -> Boolean): Term {
+        val t1 = readNext()
+        val t2 = readNext()
+        putBack(t2)
+        putBack(t1)
+        var lhs = if (t1.type == t2.type && t1.type == TokenType.VARIABLE) {
+            parseVarGroup()
+        } else {
+            parseAtom()
+        }
         while (true) {
-            val nextToken = readSkippingWhitespace()
-            if (nextToken == final) {
-                return lhs
+            val nextToken = readNext()
+            if (!shouldAccept(nextToken)) {
+                return lhs.simplify()
             }
             putBack(nextToken)
             val rhs = parseAtom()
-            lhs = Application(lhs, rhs)
+            lhs = Application(lhs.simplify(), rhs.simplify())
         }
     }
 
     private fun parseAssignment(): Term {
-        val lhs = readSkippingWhitespace()
-        val assign = readSkippingWhitespace()
-        if (assign.toChar() != '=') {
-            throw ParsingException("Expected '=', but found '${assign.toChar()}'")
+        val lhs = readNext()
+        if (lhs.type != TokenType.VARIABLE) {
+            throw ParsingException("Expected variable name, but found $lhs")
         }
-        val rhs = parseTerm()
-        return Assignment(Variable(lhs.toChar()), rhs)
+        val assign = readNext()
+        if (assign.type != TokenType.ASSIGN) {
+            throw ParsingException("Expected ':=', but found $assign")
+        }
+        val rhs = parseTerm(this::nonEof)
+        return Assignment(Variable(lhs.value), rhs)
     }
 
     // atom ::= LPAREN term RPAREN | var+
     private fun parseAtom(): Term {
-        var token = readSkippingWhitespace()
-        if (token == '('.toInt()) {
-            return parseTerm(')'.toInt())
-        } else {
-            val vars = mutableListOf<Variable>()
-            while (token.toChar() in 'a'..'z') {
-                vars.add(Variable(token.toChar()))
-                token = readSkippingWhitespace()
-            }
-            putBack(token)
-            return Group.of(vars.toList()).simplify()
+        val token = readNext()
+        return when {
+            token.type == TokenType.OPEN_PARENS -> parseTerm(this::nonClose).simplify()
+            token.type == TokenType.VARIABLE -> Variable(token.value)
+            else -> throw ParsingException("Expected variable or '(', but found $token")
         }
     }
 
-    private fun readSkippingWhitespace(): Int {
-        var c = readNext()
-        while (whitespace.contains(c)) {
-            c = readNext()
-        }
-        return c
-    }
+    private fun nonEof(t: Token) = t.type != TokenType.EOF
+    private fun nonClose(t: Token) = t.type != TokenType.CLOSE_PARENS
+    private fun lambdaBody(t: Token): Boolean = t.type == TokenType.VARIABLE
+            || t.type == TokenType.OPEN_PARENS
+            || t.type == TokenType.LAMBDA
 
-    private fun isLambda(c: Int) = c == '\\'.toInt() || c == 'λ'.toInt()
+    private fun readNext(): Token = if (buffer.isNotEmpty()) buffer.pop() else reader.next()
 
-    private fun isDelimiter(c: Int): Boolean = lambdaBodyDelimiter.contains(c)
-
-    private fun isNotDelimiter(c: Int): Boolean = !isDelimiter(c)
-
-    private fun readNext(): Int = if (buffer.isNotEmpty()) buffer.pop() else reader.read()
-
-    private fun putBack(c: Int) = buffer.push(c)
+    private fun putBack(c: Token) = buffer.push(c)
 
     companion object {
-        private val whitespace = setOf(' ', '\t').map { it.toInt() }
-        private val lambdaBodyDelimiter = setOf(')'.toInt(), '\n'.toInt(), -1)
+        fun parse(str: String) = Parser(Lexer(StringReader(str)).tokenize()).parse()
     }
 }

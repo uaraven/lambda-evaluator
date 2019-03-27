@@ -1,17 +1,24 @@
 package net.ninjacat.lambda.parser
 
+
+class Context
+
 sealed class Term {
     open fun simplify(): Term = this
+    open fun evaluate(context: Context): Term = this
 }
+
 
 data class Variable(private val name: Char) : Term() {
     override fun toString(): String = name.toString()
 }
 
+data class Assignment(val variable: Variable, val value: Term): Term()
 
-data class Lambda(private val params: List<Variable>, private val body: List<Term>) : Term() {
+
+data class Lambda(private val params: List<Variable>, private val body: Term) : Term() {
     private val repr = lazy {
-        "λ${params.joinToString("")}.${body.joinToString("")}"
+        "λ${params.joinToString("")}.$body"
     }
 
     override fun toString(): String = repr.value
@@ -36,14 +43,18 @@ data class Lambda(private val params: List<Variable>, private val body: List<Ter
     companion object {
         data class LambdaBuilder(val params: List<Variable>) {
             fun `as`(vararg body: Term) =
-                Lambda(params, body.toList())
+                Lambda(params, Group.of(body.toList()).simplify())
 
-            fun `as`(body: List<Term>) = Lambda(params, body)
+            fun `as`(body: List<Term>) = Lambda(params, Group.of(body).simplify())
         }
 
         fun of(vararg params: Variable) =
             LambdaBuilder(params.toList())
     }
+}
+
+data class Application(val func: Term, val params: Term): Term() {
+    override fun toString(): String = "($func)($params)"
 }
 
 data class Group(private val terms: List<Term>) : Term() {
@@ -56,6 +67,7 @@ data class Group(private val terms: List<Term>) : Term() {
 
     companion object {
         fun of(vararg term: Term) = Group(term.toList())
+        fun of(vars :List<Term>) = Group(vars)
     }
 
     /**

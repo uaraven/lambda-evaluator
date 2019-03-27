@@ -5,18 +5,86 @@ import java.util.*
 
 /**
  * λ calculus parser.
- * <pre>
- * Splits input into
- *  - Groups (everything in brackets)
- *  - Lambdas
- *    - Variables
- * </pre>
  */
 class Parser(private val reader: Reader) {
 
     private val buffer: Deque<Int> = LinkedList<Int>()
 
-    fun tokenize(): Term = readTerm { it == -1 }
+    fun parse(): Term = parseTerm()
+
+    /**
+     * term ::= assignment | application | LAMBDA var+ DOT term
+     */
+    private fun parseTerm(final: Int = -1): Term {
+        var t = readSkippingWhitespace()
+        if (isLambda(t)) {
+            t = readSkippingWhitespace()
+            val params = mutableListOf<Variable>()
+            while (t != final && t != '.'.toInt()) {
+                if (t.toChar() in 'a'..'z') {
+                    params.add(Variable(t.toChar()))
+                } else {
+                    throw ParsingException("Expected variable name, but got '${t.toChar()}'")
+                }
+                t = readSkippingWhitespace()
+            }
+            val body = parseTerm(-1)
+            return Lambda(params, body).simplify()
+        } else {
+            val next = readSkippingWhitespace()
+            putBack(next)
+            if (next.toChar() == '=') {
+                putBack(t)
+                return parseAssignment()
+            } else {
+                putBack(t)
+                return parseApplication(final)
+            }
+        }
+    }
+
+    /**
+     * application ::= atom | application'
+     * application' ::= atom application' | empty
+     */
+    private fun parseApplication(final: Int = -1): Term {
+        var lhs = parseAtom()
+        while (true) {
+            val nextToken = readSkippingWhitespace()
+            if (nextToken == final) {
+                return lhs
+            }
+            putBack(nextToken)
+            val rhs = parseAtom()
+            lhs = Application(lhs, rhs)
+        }
+    }
+
+    private fun parseAssignment(): Term {
+        val lhs = readSkippingWhitespace()
+        val assign = readSkippingWhitespace()
+        if (assign.toChar() != '=') {
+            throw ParsingException("Expected '=', but found '${assign.toChar()}'")
+        }
+        val rhs = parseTerm()
+        return Assignment(Variable(lhs.toChar()), rhs)
+    }
+
+    // atom ::= LPAREN term RPAREN | var+
+    private fun parseAtom(): Term {
+        var token = readSkippingWhitespace()
+        if (token == '('.toInt()) {
+            return parseTerm(')'.toInt())
+        } else {
+            val vars = mutableListOf<Variable>()
+            while (token.toChar() in 'a'..'z') {
+                vars.add(Variable(token.toChar()))
+                token = readSkippingWhitespace()
+            }
+            putBack(token)
+            return Group.of(vars.toList()).simplify()
+        }
+    }
 
     private fun readSkippingWhitespace(): Int {
         var c = readNext()
@@ -26,68 +94,11 @@ class Parser(private val reader: Reader) {
         return c
     }
 
-    private fun readTerm(endingPredicate: (Int) -> Boolean = this::isDelimiter): Term {
-        val blockTerms = mutableListOf<Term>()
-        var c = readSkippingWhitespace()
-        termLoop@while (!endingPredicate(c)) {
-            when (c) {
-                '('.toInt() -> blockTerms.add(readTerm().simplify())
-                '\\'.toInt(),
-                'λ'.toInt() -> blockTerms.add(readLambda().simplify())
-                ')'.toInt() -> break@termLoop
-                -1 -> throw ParsingException("Expected ')' but found EOF")
-                else ->
-                    if (!whitespace.contains(c)) {
-                        blockTerms.add(Variable(c.toChar()))
-                    }
-            }
-            c = readSkippingWhitespace()
-        }
-        return Group(blockTerms.toList()).simplify()
-    }
-
-    private fun readLambda(): Term {
-        val params = readParams()
-        val body = readLambdaBody()
-        return Lambda(params, body)
-    }
-
-    private fun readLambdaBody(): List<Term> {
-        val bodyTerms = mutableListOf<Term>()
-        var c = readSkippingWhitespace()
-        while (!isDelimiter(c)) {
-            when (c) {
-                '('.toInt() -> bodyTerms.add(readTerm().simplify())
-                '\\'.toInt(),
-                'λ'.toInt() -> bodyTerms.add(readLambda().simplify())
-                else ->
-                    if (!whitespace.contains(c)) {
-                        bodyTerms.add(Variable(c.toChar()))
-                    }
-            }
-            c = readSkippingWhitespace()
-        }
-        return bodyTerms.toList()
-    }
+    private fun isLambda(c: Int) = c == '\\'.toInt() || c == 'λ'.toInt()
 
     private fun isDelimiter(c: Int): Boolean = lambdaBodyDelimiter.contains(c)
 
-    private fun readParams(): List<Variable> {
-        val params = mutableListOf<Variable>()
-        var c = readSkippingWhitespace()
-        while (c != '.'.toInt() && c != -1) {
-            while (whitespace.contains(c)) {
-                c = readNext()
-            }
-            if (c.toChar() in 'a'..'z') {
-                params.add(Variable(c.toChar()))
-            } else {
-                throw ParsingException("Expected lowercase variable name, but found '${c.toChar()}'")
-            }
-            c = readSkippingWhitespace()
-        }
-        return params.toList()
-    }
+    private fun isNotDelimiter(c: Int): Boolean = !isDelimiter(c)
 
     private fun readNext(): Int = if (buffer.isNotEmpty()) buffer.pop() else reader.read()
 

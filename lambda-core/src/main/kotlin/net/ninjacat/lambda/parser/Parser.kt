@@ -43,31 +43,12 @@ class Parser(tokens: Sequence<Token>) {
         }
     }
 
-    private fun parseVarGroup(): Term {
-        val groupTerms = mutableListOf<Term>()
-        var next = readNext()
-        while (next.type == TokenType.VARIABLE) {
-            groupTerms.add(Variable(next.value))
-            next = readNext()
-        }
-        putBack(next)
-        return Group.of(groupTerms)
-    }
-
     /**
      * application ::= atom | application'
      * application' ::= atom application' | empty
      */
     private fun parseApplication(shouldAccept: (Token) -> Boolean): Term {
-        val t1 = readNext()
-        val t2 = readNext()
-        putBack(t2)
-        putBack(t1)
-        var lhs = if (t1.type == t2.type && t1.type == TokenType.VARIABLE) {
-            parseVarGroup()
-        } else {
-            parseAtom()
-        }
+        var lhs = parseAtom()
         while (true) {
             val nextToken = readNext()
             if (!shouldAccept(nextToken)) {

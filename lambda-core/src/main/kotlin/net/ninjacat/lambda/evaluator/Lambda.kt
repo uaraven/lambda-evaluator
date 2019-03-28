@@ -57,15 +57,9 @@ data class Lambda(private val params: List<Variable>, private val body: Term) : 
 
     companion object {
         data class LambdaBuilder(val params: List<Variable>) {
-            fun `as`(vararg body: Term) =
-                Lambda(
-                    params,
-                    Group.of(body.toList()).simplify()
-                )
-
-            fun `as`(body: List<Term>) = Lambda(
+            fun `as`(body: Term) = Lambda(
                 params,
-                Group.of(body).simplify()
+                body.simplify()
             )
         }
 
@@ -74,8 +68,15 @@ data class Lambda(private val params: List<Variable>, private val body: Term) : 
     }
 }
 
-data class Application(val func: Term, val params: Term) : Term() {
-    override fun toString(): String = "$func$params"
+data class Application(val a: Term, val b: Term) : Term() {
+    val repr = lazy {
+        if (a is Lambda) "($a)(b)" else "$a$b"
+    }
+    override fun toString(): String = repr.value
+
+    companion object {
+        fun of(vararg terms: Term) = terms.reduce { lhs, rhs -> Application(lhs, rhs) }
+    }
 }
 
 data class Group(private val terms: List<Term>) : Term() {

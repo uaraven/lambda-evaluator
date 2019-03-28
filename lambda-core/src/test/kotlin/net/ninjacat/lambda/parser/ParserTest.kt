@@ -28,16 +28,16 @@ class ParserTest {
         assertThat(term, equalTo(expected))
     }
 
-    @Test
-    fun testVariableGroup() {
-        val term = Parser.parse("(xy)")
-        val expected = Group.of(
-            Variable("x"),
-            Variable("y")
-        ) as Term
-
-        assertThat(term, equalTo(expected))
-    }
+//    @Test
+//    fun testVariableGroup() {
+//        val term = Parser.parse("(xy)")
+//        val expected = Group.of(
+//            Variable("x"),
+//            Variable("y")
+//        ) as Term
+//
+//        assertThat(term, equalTo(expected))
+//    }
 
     @Test
     fun testVariableApplication() {
@@ -56,9 +56,11 @@ class ParserTest {
         val expected = Lambda
             .of(Variable("x"), Variable("y"))
             .`as`(
-                Variable("x"),
-                Variable("a"),
-                Variable("y")
+                Application.of(
+                    Variable("x"),
+                    Variable("a"),
+                    Variable("y")
+                )
             ).simplify() as Term
 
         assertThat(term, equalTo(expected))
@@ -72,11 +74,9 @@ class ParserTest {
             Lambda
                 .of(Variable("x"), Variable("y"))
                 .`as`(
-                    Variable("x"),
-                    Variable("a"),
-                    Variable("y")
+                    Application.of(Variable("x"), Variable("a"), Variable("y"))
                 ).simplify(),
-            Group.of(
+            Application(
                 Variable("a"),
                 Variable("b")
             )

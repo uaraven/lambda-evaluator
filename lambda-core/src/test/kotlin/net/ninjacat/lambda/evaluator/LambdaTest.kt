@@ -1,7 +1,5 @@
 package net.ninjacat.lambda.evaluator
 
-import net.ninjacat.lambda.evaluator.Lambda
-import net.ninjacat.lambda.evaluator.Variable
 import org.hamcrest.MatcherAssert.assertThat
 import org.hamcrest.Matchers.equalTo
 import org.junit.Test
@@ -24,11 +22,11 @@ class LambdaTest {
     @Test
     fun testNestedToString() {
         val f1 = Lambda.of(
-            Variable("y")).`as`(
-                Variable("x"),
-                Variable("z"),
+            Variable("y")
+        ).`as`(
+            Application.of(Variable("x"), Variable("z"),
                 Variable("y")
-
+            )
         )
         val func = Lambda.of(Variable("x")).`as`(f1)
 
@@ -38,10 +36,10 @@ class LambdaTest {
     @Test
     fun testLambdaSimplification() {
         val lambda = Lambda.of(Variable("a"), Variable("b"))
-            .`as`(Variable("a"), Variable("x"), Variable("b"))
+            .`as`(Application.of(Variable("a"), Variable("x"), Variable("b")))
 
         val expected = Lambda.of(Variable("a")).`as`(
-            Lambda.of(Variable("b")).`as`(Variable("a"), Variable("x"), Variable("b"))
+            Lambda.of(Variable("b")).`as`(Application.of(Variable("a"), Variable("x"), Variable("b")))
         )
 
         assertThat(lambda.simplify(), equalTo(expected))

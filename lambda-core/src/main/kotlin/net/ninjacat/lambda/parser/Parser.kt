@@ -18,29 +18,37 @@ class Parser(tokens: Sequence<Token>) {
      * term ::= assignment | application | LAMBDA var+ DOT term
      */
     private fun parseTerm(shouldAccept: (Token) -> Boolean): Term {
-        var t = readNext()
-        if (t.type == TokenType.LAMBDA) {
-            t = readNext()
-            val params = mutableListOf<Variable>()
-            while (shouldAccept(t) && t.type != TokenType.DOT) {
-                if (t.type == TokenType.VARIABLE) {
-                    params.add(Variable(t.value))
-                } else {
-                    throw ParsingException("Expected variable name, but got $t")
-                }
-                t = readNext()
-            }
-            val body = parseTerm(this::lambdaBody).simplify()
-            return Lambda(params, body).simplify()
+        val t = readNext()
+        return if (t.type == TokenType.LAMBDA) {
+            parseLambda(shouldAccept)
         } else {
             val next = readNext()
             putBack(next)
             putBack(t)
-            return when {
+            when {
                 next.type == TokenType.ASSIGN -> parseAssignment()
                 else -> parseApplication(shouldAccept).simplify()
             }
         }
+    }
+
+    /**
+     * Parses lambda, unwrapping λxyz.() into λx.λy.λz.() and calculating De Bruijn
+     * indices for variables
+     */
+    private fun parseLambda(shouldAccept: (Token) -> Boolean): Abstraction {
+        var t = readNext()
+        val params = mutableListOf<Variable>()
+        while (shouldAccept(t) && t.type != TokenType.DOT) {
+            if (t.type == TokenType.VARIABLE) {
+                params.add(Variable(t.value))
+            } else {
+                throw ParsingException("Expected variable name, but got $t")
+            }
+            t = readNext()
+        }
+        val body = parseTerm(this::lambdaBody).simplify()
+        return Abstraction.of(params.toList()).`as`(body).simplify()
     }
 
     /**

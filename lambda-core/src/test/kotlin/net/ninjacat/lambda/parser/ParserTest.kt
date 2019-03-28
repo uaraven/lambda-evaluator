@@ -19,7 +19,7 @@ class ParserTest {
     @Test
     fun shouldParseIdentity() {
         val term = Parser.parse("\\x.x")
-        val expected = Lambda
+        val expected = Abstraction
             .of(Variable("x"))
             .`as`(
                 Variable("x")
@@ -53,7 +53,7 @@ class ParserTest {
     @Test
     fun testSimpleLambda() {
         val term = Parser.parse("\\xy.xay")
-        val expected = Lambda
+        val expected = Abstraction
             .of(Variable("x"), Variable("y"))
             .`as`(
                 Application.of(
@@ -71,7 +71,7 @@ class ParserTest {
         val term = Parser.parse("(λxy.xay)(a b)")
 
         val expected = Application(
-            Lambda
+            Abstraction
                 .of(Variable("x"), Variable("y"))
                 .`as`(
                     Application.of(Variable("x"), Variable("a"), Variable("y"))
@@ -91,7 +91,7 @@ class ParserTest {
 
         val expected = Assignment(
             Variable("ID"),
-            Lambda
+            Abstraction
                 .of(Variable("x"), Variable("y"))
                 .`as`(
                     Variable("x")

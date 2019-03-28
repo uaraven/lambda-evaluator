@@ -31,6 +31,10 @@ data class Variable(val name: String) : Term() {
         }
 }
 
+/**
+ * Assignment is not a part of lambda calculus, but allows binding of any term to a name
+ * Only expressions not containing free variables can be assigned to
+ */
 data class Assignment(val variable: Variable, val value: Term) : Term() {
     override fun freeVariables(): Sequence<Variable> = value.freeVariables()
     override fun boundVariables(): Sequence<Variable> = value.boundVariables()
@@ -39,6 +43,9 @@ data class Assignment(val variable: Variable, val value: Term) : Term() {
         Assignment(variable, value.substitute(nameMapping))
 }
 
+/**
+ * Lambda abstraction
+ */
 data class Abstraction(private val param: Variable, private val body: Term) : Term() {
     private val repr = lazy {
         "λ$param.$body"

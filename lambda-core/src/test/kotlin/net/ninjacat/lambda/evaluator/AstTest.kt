@@ -9,12 +9,8 @@ class AstTest {
     @Test
     fun testToString() {
         val func = Abstraction
-            .of(
-                Variable("s"), Variable("z")
-            )
-            .`as`(
-                Variable("z")
-            )
+            .of("s", "z")
+            .`as`(Variable("z"))
 
         assertThat(func.toString(), equalTo("λs.λz.z"))
     }
@@ -33,12 +29,16 @@ class AstTest {
     }
 
     @Test
-    fun testLambdaSimplification() {
-        val lambda = Abstraction.of(Variable("a"), Variable("b"))
+    fun testLambdaBuilderUnwrapping() {
+        val lambda = Abstraction.of("a", "b")
             .`as`(Application.of(Variable("a"), Variable("x"), Variable("b")))
 
-        val expected = Abstraction.of(Variable("a")).`as`(
-            Abstraction.of(Variable("b")).`as`(Application.of(Variable("a"), Variable("x"), Variable("b")))
+        val expected = Abstraction(
+            Variable("a"),
+            Abstraction(
+                Variable("b"),
+                Application.of(Variable("a"), Variable("x"), Variable("b"))
+            )
         )
 
         assertThat(lambda.simplify(), equalTo(expected))

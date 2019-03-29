@@ -7,50 +7,53 @@ import org.junit.Test
 class AstTest {
 
     @Test
-    fun testToString() {
+    fun testRepr() {
         val func = Abstraction
             .of("s", "z")
-            .`as`(Variable("z"))
+            .`as`(Variable("z", 0))
 
-        assertThat(func.toString(), equalTo("λs.λz.z"))
+        assertThat(func.repr(), equalTo("λs.λz.z"))
     }
 
     @Test
-    fun testNestedToString() {
+    fun testDeBruijnRepr() {
+        val func =Abstraction.of("x", "y", "z").`as`(
+            Application.of(
+                Application.of(Variable("x", 2), Variable("y", 1)),
+                Variable("z", 0)
+            )
+        )
+
+        assertThat(func.toDeBruijnString(), equalTo("λ λ λ 2 1 0"))
+    }
+
+    @Test
+    fun testNestedRepr() {
         val f1 = Abstraction.of("y").`as`(
             Application.of(
-                Variable("x"), Variable("z"),
-                Variable("y")
+                Variable("x", -1), Variable("z", -1),
+                Variable("y", 0)
             )
         )
         val func = Abstraction.of("x").`as`(f1)
 
-        assertThat(func.toString(), equalTo("λx.λy.xzy"))
+        assertThat(func.repr(), equalTo("λx.λy.xzy"))
     }
 
     @Test
     fun testLambdaBuilderUnwrapping() {
         val lambda = Abstraction.of("a", "b")
-            .`as`(Application.of(Variable("a"), Variable("x"), Variable("b")))
+            .`as`(Application.of(Variable("a", 0), Variable("x", -1), Variable("b", 0)))
 
         val expected = Abstraction(
-            Variable("a"),
+            Variable.parameter("a"),
             Abstraction(
-                Variable("b"),
-                Application.of(Variable("a"), Variable("x"), Variable("b"))
+                Variable.parameter("b"),
+                Application.of(Variable("a", 0), Variable("x", -1), Variable("b", 0))
             )
         )
 
-        assertThat(lambda.simplify(), equalTo(expected))
+        assertThat(lambda, equalTo(expected))
     }
 
-    @Test
-    fun testAlphaConversion() {
-        val func = Abstraction.of("x").`as`(Application.of(Variable("x"), Variable("y")))
-        val converted = func.alphaConversion()
-
-        val expected = Abstraction.of("x'0'").`as`(Application.of(Variable("x'0'"), Variable("y"))) as Term
-
-        assertThat(converted, equalTo(expected))
-    }
 }

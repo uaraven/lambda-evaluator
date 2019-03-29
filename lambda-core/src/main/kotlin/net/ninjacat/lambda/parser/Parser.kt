@@ -4,6 +4,9 @@ import net.ninjacat.lambda.evaluator.*
 import java.io.StringReader
 import java.util.*
 
+
+typealias BindingContext = List<String>
+
 /**
  * λ calculus parser.
  */
@@ -12,63 +15,61 @@ class Parser(tokens: Sequence<Token>) {
     private val reader = tokens.iterator()
     private val buffer: Deque<Token> = LinkedList<Token>()
 
-    fun parse(): Term = parseTerm(this::nonEof)
+    fun parse(): Term = parseTerm(this::nonEof, listOf())
 
     /**
      * term ::= assignment | application | LAMBDA var+ DOT term
      */
-    private fun parseTerm(shouldAccept: (Token) -> Boolean): Term {
+    private fun parseTerm(shouldAccept: (Token) -> Boolean, context: BindingContext): Term {
         val t = readNext()
         return if (t.type == TokenType.LAMBDA) {
-            parseLambda(shouldAccept)
+            parseLambda(shouldAccept, context)
         } else {
             val next = readNext()
             putBack(next)
             putBack(t)
             when {
-                next.type == TokenType.ASSIGN -> parseAssignment()
-                else -> parseApplication(shouldAccept).simplify()
+                next.type == TokenType.ASSIGN -> parseAssignment(context)
+                else -> parseApplication(shouldAccept, context)
             }
         }
     }
 
     /**
-     * Parses lambda, unwrapping λxyz.() into λx.λy.λz.() and calculating De Bruijn
-     * indices for variables
+     * Parses lambda, calculating De Bruijn indices for bound variables
      */
-    private fun parseLambda(shouldAccept: (Token) -> Boolean): Abstraction {
-        var t = readNext()
-        val params = mutableListOf<Variable>()
-        while (shouldAccept(t) && t.type != TokenType.DOT) {
-            if (t.type == TokenType.VARIABLE) {
-                params.add(Variable(t.value))
-            } else {
-                throw ParsingException("Expected variable name, but got $t")
-            }
-            t = readNext()
+    private fun parseLambda(shouldAccept: (Token) -> Boolean, context: BindingContext): Abstraction {
+        val t = readNext()
+        if (!shouldAccept(t) || t.type != TokenType.VARIABLE) {
+            throw ParsingException("Identifier expected, but '$t' found")
         }
-        val body = parseTerm(this::lambdaBody).simplify()
-        return Abstraction.of(params.toList()).`as`(body).simplify()
+        val id = Variable.parameter(t.value)
+        val dot = readNext()
+        if (!shouldAccept(dot) || dot.type != TokenType.DOT) {
+            throw ParsingException("'.' expected, but '$t' found")
+        }
+        val body = parseTerm(shouldAccept, listOf(id.name) + context)
+        return Abstraction.of(id).`as`(body)
     }
 
     /**
      * application ::= atom | application'
      * application' ::= atom application' | empty
      */
-    private fun parseApplication(shouldAccept: (Token) -> Boolean): Term {
-        var lhs = parseAtom()
+    private fun parseApplication(shouldAccept: (Token) -> Boolean, context: BindingContext): Term {
+        var lhs = parseAtom(context)
         while (true) {
             val nextToken = readNext()
             if (!shouldAccept(nextToken)) {
-                return lhs.simplify()
+                return lhs
             }
             putBack(nextToken)
-            val rhs = parseAtom()
-            lhs = Application(lhs.simplify(), rhs.simplify())
+            val rhs = parseAtom(context)
+            lhs = Application(lhs, rhs)
         }
     }
 
-    private fun parseAssignment(): Term {
+    private fun parseAssignment(context: BindingContext): Term {
         val lhs = readNext()
         if (lhs.type != TokenType.VARIABLE) {
             throw ParsingException("Expected variable name, but found $lhs")
@@ -77,25 +78,22 @@ class Parser(tokens: Sequence<Token>) {
         if (assign.type != TokenType.ASSIGN) {
             throw ParsingException("Expected ':=', but found $assign")
         }
-        val rhs = parseTerm(this::nonEof)
-        return Assignment(Variable(lhs.value), rhs)
+        val rhs = parseTerm(this::nonEof, context)
+        return Assignment(Variable.parameter(lhs.value), rhs)
     }
 
     // atom ::= LPAREN term RPAREN | var+
-    private fun parseAtom(): Term {
+    private fun parseAtom(context: BindingContext): Term {
         val token = readNext()
         return when {
-            token.type == TokenType.OPEN_PARENS -> parseTerm(this::nonClose).simplify()
-            token.type == TokenType.VARIABLE -> Variable(token.value)
+            token.type == TokenType.OPEN_PARENS -> parseTerm(this::nonClose, context)
+            token.type == TokenType.VARIABLE -> Variable(token.value, context.indexOf(token.value))
             else -> throw ParsingException("Expected variable or '(', but found $token")
         }
     }
 
     private fun nonEof(t: Token) = t.type != TokenType.EOF
     private fun nonClose(t: Token) = t.type != TokenType.CLOSE_PARENS
-    private fun lambdaBody(t: Token): Boolean = t.type == TokenType.VARIABLE
-            || t.type == TokenType.OPEN_PARENS
-            || t.type == TokenType.LAMBDA
 
     private fun readNext(): Token = if (buffer.isNotEmpty()) buffer.pop() else reader.next()
 

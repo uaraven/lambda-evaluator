@@ -2,33 +2,19 @@ package net.ninjacat.lambda.evaluator
 
 
 sealed class Term {
-    open fun simplify(): Term = this
-    open fun alphaConversion(): Term {
-        val renaming = boundVariables().withIndex().map { Pair(it.value.name, "x'${it.index}'") }.toMap()
-        return substitute(renaming)
-    }
-
-    open fun betaReduction(context: Context): Term = this
-    open fun etaReduction(context: Context): Term = this
-
-    internal abstract fun substitute(nameMapping: Map<String, String>): Term
-
-    abstract fun freeVariables(): Sequence<Variable>
-    abstract fun boundVariables(): Sequence<Variable>
+    open fun repr() = toString()
+    open fun toDeBruijnString() = toString()
 }
 
-data class Variable(val name: String) : Term() {
-    override fun toString(): String = name
+data class Variable(val name: String, val bindingIndex: Int) : Term() {
+    override fun toString(): String = "$name[$bindingIndex]"
 
-    override fun freeVariables(): Sequence<Variable> = setOf(this).asSequence()
-    override fun boundVariables(): Sequence<Variable> = setOf<Variable>().asSequence()
+    override fun repr(): String = name
+    override fun toDeBruijnString(): String = "${if (bindingIndex >= 0) bindingIndex.toString() else name} "
 
-    override fun substitute(nameMapping: Map<String, String>): Variable =
-        if (nameMapping.containsKey(name)) {
-            Variable(nameMapping.getValue(name))
-        } else {
-            this
-        }
+    companion object {
+        fun parameter(name: String) = Variable(name, -1)
+    }
 }
 
 /**
@@ -36,33 +22,23 @@ data class Variable(val name: String) : Term() {
  * Only expressions not containing free variables can be assigned to
  */
 data class Assignment(val variable: Variable, val value: Term) : Term() {
-    override fun freeVariables(): Sequence<Variable> = value.freeVariables()
-    override fun boundVariables(): Sequence<Variable> = value.boundVariables()
-
-    override fun substitute(nameMapping: Map<String, String>): Term =
-        Assignment(variable, value.substitute(nameMapping))
+    override fun toString(): String = "$variable := $value".trim()
+    override fun repr(): String = "${variable.repr()} := ${value.repr()}".trim()
 }
 
 /**
  * Lambda abstraction
  */
 data class Abstraction(private val param: Variable, private val body: Term) : Term() {
-    private val repr = lazy {
+    private val strRepr = lazy {
         "λ$param.$body"
     }
-
-    override fun toString(): String = repr.value
-
-    override fun freeVariables() = body.freeVariables().filterNot { it.name == param.name }
-    override fun boundVariables(): Sequence<Variable> {
-        val freeVarNames = freeVariables().map { it.name }.toSet()
-        return setOf(param).filterNot { freeVarNames.contains(it.name) }.asSequence()
+    private val repr = lazy {
+        "λ${param.repr()}.${body.repr()}"
     }
-
-    override fun substitute(nameMapping: Map<String, String>): Abstraction =
-        Abstraction(param.substitute(nameMapping), body.substitute(nameMapping))
-
-    override fun simplify(): Abstraction = this
+    override fun toString(): String = strRepr.value
+    override fun repr(): String = repr.value
+    override fun toDeBruijnString(): String ="λ ${body.toDeBruijnString()}".trim()
 
     companion object {
         data class LambdaBuilder(val params: List<Variable>) {
@@ -76,10 +52,8 @@ data class Abstraction(private val param: Variable, private val body: Term) : Te
             }
         }
 
-        fun of(params: List<Variable>) = LambdaBuilder(params)
-
         fun of(vararg params: String) =
-            LambdaBuilder(params.map { Variable(it) }.toList())
+            LambdaBuilder(params.map { Variable.parameter(it) }.toList())
 
         fun of(vararg params: Variable) =
             LambdaBuilder(params.toList())
@@ -88,22 +62,19 @@ data class Abstraction(private val param: Variable, private val body: Term) : Te
 }
 
 data class Application(val a: Term, val b: Term) : Term() {
+    private val toDeBruijnStrRepr = lazy {
+        if (a is Abstraction) "(${a.toDeBruijnString()})(${b.toDeBruijnString()})" else "${a.toDeBruijnString()}${b.toDeBruijnString()}"
+    }
+    private val toStrRepr = lazy {
+        if (a is Abstraction) "($a)($b)" else "$a$b"
+    }
     private val repr = lazy {
-        if (a is Abstraction) "($a)(b)" else "$a$b"
+        if (a is Abstraction) "(${a.repr()})(${b.repr()})" else "${a.repr()}${b.repr()}"
     }
 
-    override fun toString(): String = repr.value
-
-    override fun freeVariables(): Sequence<Variable> {
-        return (a.freeVariables().toSet() + b.freeVariables().toSet()).asSequence()
-    }
-
-    override fun boundVariables(): Sequence<Variable> {
-        return (a.boundVariables().toSet() + b.boundVariables().toSet()).asSequence()
-    }
-
-    override fun substitute(nameMapping: Map<String, String>): Application =
-        Application(a.substitute(nameMapping), b.substitute(nameMapping))
+    override fun repr(): String = repr.value
+    override fun toString(): String = toStrRepr.value
+    override fun toDeBruijnString(): String = toDeBruijnStrRepr.value
 
     companion object {
         fun of(vararg terms: Term) = terms.reduce { lhs, rhs -> Application(lhs, rhs) }

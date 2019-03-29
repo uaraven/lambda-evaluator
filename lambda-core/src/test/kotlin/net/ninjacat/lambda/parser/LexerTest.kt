@@ -24,6 +24,50 @@ class LexerTest {
     }
 
     @Test
+    fun shouldUnwrapMultiParameterAbstraction() {
+        val lexer = Lexer(StringReader(" λxy.xy"))
+        val tokens = lexer.tokenize().toList()
+        val expected = listOf(
+            Token.lambda,
+            Token.`var`("x"),
+            Token.dot,
+            Token.lambda,
+            Token.`var`("y"),
+            Token.dot,
+            Token.`var`("x"),
+            Token.`var`("y"),
+            Token.eof
+        )
+        assertThat(tokens, equalTo(expected))
+    }
+
+    @Test
+    fun shouldUnwrapSeveralMultiParameterAbstractions() {
+        val lexer = Lexer(StringReader("λxyz.λab.c"))
+        val tokens = lexer.tokenize().toList()
+        val expected = listOf(
+            Token.lambda,
+            Token.`var`("x"),
+            Token.dot,
+            Token.lambda,
+            Token.`var`("y"),
+            Token.dot,
+            Token.lambda,
+            Token.`var`("z"),
+            Token.dot,
+            Token.lambda,
+            Token.`var`("a"),
+            Token.dot,
+            Token.lambda,
+            Token.`var`("b"),
+            Token.dot,
+            Token.`var`("c"),
+            Token.eof
+        )
+        assertThat(tokens, equalTo(expected))
+    }
+
+    @Test
     fun shouldTokenizeYCombinator() {
         val lexer = Lexer(StringReader(" λg.( λx.g(xx) ) ( λx.g(xx) )"))
         val tokens = lexer.tokenize().toList()

@@ -1,6 +1,7 @@
 package net.ninjacat.lambda.evaluator
 
 import org.hamcrest.MatcherAssert.assertThat
+import org.hamcrest.Matchers.`is`
 import org.hamcrest.Matchers.equalTo
 import org.junit.Test
 
@@ -24,7 +25,7 @@ class AstTest {
             )
         )
 
-        assertThat(func.toDeBruijnString(), equalTo("λ λ λ 2 1 0"))
+        assertThat(func.indexedRepr(), equalTo("λ λ λ 2 1 0"))
     }
 
     @Test
@@ -56,4 +57,32 @@ class AstTest {
         assertThat(lambda, equalTo(expected))
     }
 
+    @Test
+    fun shouldShiftIndexOfVariable() {
+        val x = Variable("x", 0)
+        val shifted = x.shift(1, 0)
+        assertThat(shifted.bindingIndex, `is`(1))
+    }
+
+    @Test
+    fun shouldNotShiftIndexOfVariable() {
+        val x = Variable("x", 0)
+        val shifted = x.shift(1, 1)
+        assertThat(shifted.bindingIndex, `is`(0))
+    }
+
+    @Test
+    fun shouldShiftParametersInApplication() {
+        val app = Application(
+            Variable("x", 0),
+            Variable("y", 0)
+        )
+        val shifted = app.shift(1, 0)
+
+        val expected = Application(
+            Variable("x", 1),
+            Variable("y", 1)
+        )
+        assertThat(shifted, `is`(expected))
+    }
 }

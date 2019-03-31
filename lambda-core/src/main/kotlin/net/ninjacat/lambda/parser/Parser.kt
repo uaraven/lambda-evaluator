@@ -82,7 +82,7 @@ class Parser(tokens: Sequence<Token>) {
         return Assignment(Variable.parameter(lhs.value), rhs)
     }
 
-    // atom ::= LPAREN term RPAREN | var+
+    // atom ::= LPAREN term RPAREN | var
     private fun parseAtom(context: BindingContext): Term {
         val token = readNext()
         return when {

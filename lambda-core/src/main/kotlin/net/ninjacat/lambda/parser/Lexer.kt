@@ -39,6 +39,8 @@ private data class LambdaUnwrapperState(
     private var paramCount: Int,
     private var expectingDot: Boolean
 ) {
+    fun inLambda() = inLambda
+
     fun startLambda() {
         inLambda = true
         expectingDot = false
@@ -121,8 +123,8 @@ class Lexer(private val reader: Reader) {
                             luState.startLambda()
                             Token.lambda
                         } else {
-                            luState.addParameter()
-                            Token.`var`(c.toChar().toString())
+                                luState.addParameter()
+                                Token.`var`(c.toChar().toString())
                         }
                     }
                     in 'A'..'Z' -> {
@@ -138,8 +140,8 @@ class Lexer(private val reader: Reader) {
                                 t = readNext()
                             }
                             putBack(t)
-                            luState.addParameter()
-                            Token.`var`(name.toString())
+                                luState.addParameter()
+                                Token.`var`(name.toString())
                         }
                     }
                     else -> throw ParsingException("Unexpected token '${c.toChar()}'")

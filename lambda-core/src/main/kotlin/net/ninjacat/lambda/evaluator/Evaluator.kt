@@ -25,7 +25,9 @@ class Evaluator {
     private fun evaluationStep(root: Term): Term {
         return when (root) {
             is Application -> {
-                if (isValue(root.a) && isValue(root.b)) {
+                if (root.a is Variable && root.b is Variable) {
+                    root
+                } else if (isValue(root.a) && isValue(root.b)) {
                     substitute(root.a, if (root.b is Abstraction) root.b.body else root.b)
                 } else if (isValue(root.a)) {
                     Application.of(root.a, evaluationStep(root.b))

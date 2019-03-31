@@ -9,15 +9,23 @@ class Evaluator {
 
     fun eval(root: Term): List<Term> {
         val results = mutableListOf<Term>()
-        System.out.println(root.repr() + " -> " + root.indexedRepr())
-        root.resolve(context)
-        internalEval(root, results)
+        val term= root.resolve(context)
+        if (term is Assignment) {
+            val lastEvaluated = internalEval(term.value, results)
+            if (results.isEmpty()) {
+                results.add(lastEvaluated)
+            }
+            context[term.variable.name] = evaluationStep(results.last())
+        } else {
+            internalEval(term, results)
+        }
         return results.toList()
     }
 
+    fun getNamed(name: String): Term? = context[name]
+
     private fun internalEval(term: Term, result: MutableList<Term>): Term {
         val evaluated = evaluationStep(term)
-        System.out.println(evaluated.repr() + " -> " + evaluated.indexedRepr())
         return if (evaluated == term) {
             evaluated
         } else {

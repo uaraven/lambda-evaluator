@@ -5,6 +5,7 @@ import org.hamcrest.Matchers
 import org.hamcrest.Matchers.equalTo
 import org.junit.Assert.assertThat
 import org.junit.Test
+import kotlin.math.exp
 
 class EvaluatorTest {
 
@@ -43,6 +44,28 @@ class EvaluatorTest {
         )
 
         assertThat(final.last(), equalTo(expected))
-
     }
+
+    @Test
+    fun shouldEvaluateRhsAndStoreInContext() {
+        val expr = Parser.parse("ID := \\x.x")
+        val evaluator = Evaluator()
+
+        evaluator.eval(expr)
+        val expected = Abstraction.of("x").`as`(Variable("x", 0)) as Term
+        assertThat(evaluator.getNamed("ID")!!, equalTo(expected))
+    }
+
+    @Test
+    fun shouldReplaceReferenceToNamedContext() {
+        val expr = Parser.parse("ID := \\x.x")
+        val usage = Parser.parse("IDa")
+        val evaluator = Evaluator()
+
+        evaluator.eval(expr)
+        val result = evaluator.eval(usage).last()
+        val expected = Variable("a", -1) as Term
+        assertThat(result, equalTo(expected))
+    }
+
 }

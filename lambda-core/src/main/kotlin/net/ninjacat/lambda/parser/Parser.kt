@@ -82,12 +82,13 @@ class Parser(tokens: Sequence<Token>) {
         return Assignment(Variable.parameter(lhs.value), rhs)
     }
 
-    // atom ::= LPAREN term RPAREN | var+
+    // atom ::= LPAREN term RPAREN | var
     private fun parseAtom(context: BindingContext): Term {
         val token = readNext()
         return when {
             token.type == TokenType.OPEN_PARENS -> parseTerm(this::nonClose, context)
             token.type == TokenType.VARIABLE -> Variable(token.value, context.indexOf(token.value))
+            token.type == TokenType.ID -> Variable(token.value, 0) // identifier outside lambda
             else -> throw ParsingException("Expected variable or '(', but found $token")
         }
     }

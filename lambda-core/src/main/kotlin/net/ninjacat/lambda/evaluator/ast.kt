@@ -17,6 +17,11 @@ sealed class Term {
 
     internal abstract fun shift(by: Int, from: Int = 0): Term
     internal abstract fun substitute(with: Term, depth: Int = -1): Term
+
+    /**
+     * Tries to resolve unbound variables by replacing them with named terms from passed context
+     */
+    abstract fun resolve(context: Map<String, Term>): Term
 }
 
 /**
@@ -39,6 +44,14 @@ data class Variable(val name: String, val bindingIndex: Int) : Term() {
             this
         }
     }
+
+    override fun resolve(context: Map<String, Term>): Term =
+        if (bindingIndex < 0 && context.containsKey(name)) {
+            context.getValue(name)
+        } else {
+            this
+        }
+
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -66,6 +79,8 @@ data class Variable(val name: String, val bindingIndex: Int) : Term() {
  * Only expressions not containing free variables can be assigned to
  */
 data class Assignment(val variable: Variable, val value: Term) : Term() {
+    override fun resolve(context: Map<String, Term>): Term = this
+
     override fun shift(by: Int, from: Int): Term = this
     override fun substitute(with: Term, depth: Int): Term = this
 
@@ -86,12 +101,14 @@ data class Abstraction(private val param: Variable, internal val body: Term) : T
     }
 
     override fun toString(): String = strRepr.value
+
     override fun repr(): String = repr.value
     override fun indexedRepr(): String = "λ ${body.indexedRepr()}".trim()
-
     override fun shift(by: Int, from: Int): Abstraction = Abstraction.of(param).`as`(body.shift(by, from + 1))
 
     override fun substitute(with: Term, depth: Int): Term = Abstraction.of(param).`as`(body.substitute(with, depth + 1))
+
+    override fun resolve(context: Map<String, Term>): Term = Abstraction.of(param).`as`(body.resolve(context))
 
 
     companion object {
@@ -122,13 +139,13 @@ data class Application(val a: Term, val b: Term) : Term() {
     private val toDeBruijnStrRepr = lazy {
         if (a is Abstraction) "(${a.indexedRepr()})(${b.indexedRepr()})" else "${a.indexedRepr()}${b.indexedRepr()}"
     }
+
     private val toStrRepr = lazy {
         if (a is Abstraction) "($a)($b)" else "$a$b"
     }
     private val repr = lazy {
         if (a is Abstraction) "(${a.repr()})(${b.repr()})" else "${a.repr()}${b.repr()}"
     }
-
     override fun shift(by: Int, from: Int): Application = Application(
         a.shift(by, from),
         b.shift(by, from)
@@ -137,6 +154,10 @@ data class Application(val a: Term, val b: Term) : Term() {
     override fun substitute(with: Term, depth: Int): Term = Application(
         a.substitute(with, depth),
         b.substitute(with, depth)
+    )
+
+    override fun resolve(context: Map<String, Term>): Term = Application(
+        a.resolve(context), b.resolve(context)
     )
 
     override fun repr(): String = repr.value

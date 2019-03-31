@@ -1,10 +1,16 @@
 package net.ninjacat.lambda.evaluator
 
+/**
+ * Evaluates lambda expression
+ */
 class Evaluator {
+
+    private val context = mutableMapOf<String, Term>()
 
     fun eval(root: Term): List<Term> {
         val results = mutableListOf<Term>()
         System.out.println(root.repr() + " -> " + root.indexedRepr())
+        root.resolve(context)
         internalEval(root, results)
         return results.toList()
     }
@@ -30,7 +36,7 @@ class Evaluator {
                 if (root.a is Variable && root.b is Variable) {
                     root
                 } else if (isValue(root.a) && isValue(root.b)) {
-                    val newAbstraction = substitute(root.a, if (root.b is Abstraction) root.b.body else root.b)
+                    val newAbstraction = substitute(root.a, root.b)
                     (newAbstraction as Abstraction).body
                 } else if (isValue(root.a)) {
                     Application.of(root.a, evaluationStep(root.b))

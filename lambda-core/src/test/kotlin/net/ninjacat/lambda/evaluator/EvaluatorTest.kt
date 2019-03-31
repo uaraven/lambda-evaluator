@@ -3,7 +3,7 @@ package net.ninjacat.lambda.evaluator
 import net.ninjacat.lambda.parser.Parser
 import org.hamcrest.Matchers
 import org.hamcrest.Matchers.equalTo
-import org.junit.Assert.*
+import org.junit.Assert.assertThat
 import org.junit.Test
 
 class EvaluatorTest {
@@ -29,5 +29,20 @@ class EvaluatorTest {
 
         assertThat(final, Matchers.hasSize(2))
         assertThat(final.last(), equalTo(expected))
+    }
+
+    @Test
+    fun shouldEvaluateLambda() {
+        val expr = Parser.parse("(λxy.((λp.px)(λq.qy)))(c)(d)(e)")
+        val evaluator = Evaluator()
+
+        val final = evaluator.eval(expr)
+        val expected: Term = Application(
+            Application(Variable("c", -1),
+            Variable("d", -1)), Variable("e", -1)
+        )
+
+        assertThat(final.last(), equalTo(expected))
+
     }
 }

@@ -4,12 +4,14 @@ class Evaluator {
 
     fun eval(root: Term): List<Term> {
         val results = mutableListOf<Term>()
+        System.out.println(root.repr() + " -> " + root.indexedRepr())
         internalEval(root, results)
         return results.toList()
     }
 
     private fun internalEval(term: Term, result: MutableList<Term>): Term {
         val evaluated = evaluationStep(term)
+        System.out.println(evaluated.repr() + " -> " + evaluated.indexedRepr())
         return if (evaluated == term) {
             evaluated
         } else {
@@ -28,7 +30,8 @@ class Evaluator {
                 if (root.a is Variable && root.b is Variable) {
                     root
                 } else if (isValue(root.a) && isValue(root.b)) {
-                    substitute(root.a, if (root.b is Abstraction) root.b.body else root.b)
+                    val newAbstraction = substitute(root.a, if (root.b is Abstraction) root.b.body else root.b)
+                    (newAbstraction as Abstraction).body
                 } else if (isValue(root.a)) {
                     Application.of(root.a, evaluationStep(root.b))
                 } else {

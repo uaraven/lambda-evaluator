@@ -18,4 +18,16 @@ class EvaluatorTest {
         assertThat(final, Matchers.hasSize(1))
         assertThat(final.first(), equalTo(Variable("a", -1) as Term))
     }
+
+    @Test
+    fun shouldEvaluateSimpleApplication2() {
+        val expr = Parser.parse("(\\x.\\y.xy)(a)(b)")
+        val evaluator = Evaluator()
+
+        val final = evaluator.eval(expr)
+        val expected: Term = Application(Variable("a", -1), Variable("b", -1))
+
+        assertThat(final, Matchers.hasSize(2))
+        assertThat(final.last(), equalTo(expected))
+    }
 }

@@ -18,7 +18,7 @@ class Evaluator {
         }
     }
 
-    private fun isValue(term: Term) = term is Abstraction
+    private fun isValue(term: Term) = term is Abstraction || term is Variable
 
     private fun substitute(where: Term, with: Term): Term = where.substitute(with.shift(1)).shift(-1)
 

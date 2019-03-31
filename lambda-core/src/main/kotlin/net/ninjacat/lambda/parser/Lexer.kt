@@ -12,7 +12,6 @@ enum class TokenType {
     CLOSE_PARENS,
     ASSIGN,
     VARIABLE,
-    ID,
     EOF
 }
 
@@ -26,7 +25,6 @@ data class Token(val type: TokenType, val value: String) {
         val closeParens = Token(TokenType.CLOSE_PARENS, ")")
         val assign = Token(TokenType.ASSIGN, ":=")
         fun `var`(name: String) = Token(TokenType.VARIABLE, name)
-        fun freeVar(name: String) = Token(TokenType.ID, name)
         val eof: Token = Token(TokenType.EOF, "<eof>")
     }
 }
@@ -125,12 +123,8 @@ class Lexer(private val reader: Reader) {
                             luState.startLambda()
                             Token.lambda
                         } else {
-                            if (luState.inLambda()) {
                                 luState.addParameter()
                                 Token.`var`(c.toChar().toString())
-                            } else {
-                                Token.freeVar(c.toChar().toString())
-                            }
                         }
                     }
                     in 'A'..'Z' -> {
@@ -146,12 +140,8 @@ class Lexer(private val reader: Reader) {
                                 t = readNext()
                             }
                             putBack(t)
-                            if (luState.inLambda()) {
                                 luState.addParameter()
                                 Token.`var`(name.toString())
-                            } else {
-                                Token.freeVar(name.toString())
-                            }
                         }
                     }
                     else -> throw ParsingException("Unexpected token '${c.toChar()}'")

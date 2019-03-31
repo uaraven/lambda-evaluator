@@ -16,7 +16,7 @@ sealed class Term {
     open fun indexedRepr() = toString()
 
     internal abstract fun shift(by: Int, from: Int = 0): Term
-    internal abstract fun substitute(with: Term, depth: Int = -1): Term
+    internal abstract fun substitute(with: Term, depth: Int = 0): Term
 }
 
 /**
@@ -39,6 +39,22 @@ data class Variable(val name: String, val bindingIndex: Int) : Term() {
             this
         }
     }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as Variable
+
+        if (bindingIndex != other.bindingIndex) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        return bindingIndex
+    }
+
 
     companion object {
         fun parameter(name: String) = Variable(name, -1)
@@ -75,7 +91,7 @@ data class Abstraction(private val param: Variable, internal val body: Term) : T
 
     override fun shift(by: Int, from: Int): Abstraction = Abstraction.of(param).`as`(body.shift(by, from + 1))
 
-    override fun substitute(with: Term, depth: Int): Term = Abstraction.of(param).`as`(body.substitute(with, depth + 1))
+    override fun substitute(with: Term, depth: Int): Term = body.substitute(with, depth + 1)
 
 
     companion object {

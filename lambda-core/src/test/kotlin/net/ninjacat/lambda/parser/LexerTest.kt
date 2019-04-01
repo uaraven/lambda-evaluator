@@ -4,6 +4,7 @@ import org.hamcrest.Matchers.equalTo
 import org.junit.Assert.*
 import org.junit.Test
 import java.io.StringReader
+import kotlin.math.exp
 
 class LexerTest {
 
@@ -99,4 +100,33 @@ class LexerTest {
         )
         assertThat(tokens, equalTo(expected))
     }
+
+    @Test
+    fun shouldTokenizeLongNamesInLambda() {
+        val lexer = Lexer(StringReader(" λaXX.XXa"))
+        val tokens = lexer.tokenize().toList()
+        val expected = listOf(
+            Token.lambda,
+            Token.`var`("a"),
+            Token.dot,
+            Token.lambda,
+            Token.`var`("XX"),
+            Token.dot,
+            Token.`var`("XX"),
+            Token.`var`("a"),
+            Token.eof
+        )
+        assertThat(tokens, equalTo(expected))
+    }
+
+    @Test(expected = LexerException::class)
+    fun shouldFailOnInvalidAssignment() {
+        Lexer(StringReader("ID = \\x.x")).tokenize()
+    }
+
+    @Test(expected = LexerException::class)
+    fun shouldFailOnInvalidAssignment2() {
+        Lexer(StringReader("ID : \\x.x")).tokenize()
+    }
+
 }

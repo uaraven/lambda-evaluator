@@ -128,4 +128,22 @@ class ParserTest {
 
         assertThat(term, equalTo(expected))
     }
+
+    @Test(expected = ParsingException::class)
+    fun shouldFailExpectingVariable() {
+        Parser.parse("\\(x).x")
+    }
+
+    @Test(expected = ParsingException::class)
+    fun shouldFailExpectingDot() {
+        val tokens = listOf(
+            Token.lambda,
+            Token.`var`("x"),
+            Token.`var`("p"),
+            Token.dot,
+            Token.`var`("x")
+        )
+        Parser(tokens.asSequence()).parse()
+    }
+
 }

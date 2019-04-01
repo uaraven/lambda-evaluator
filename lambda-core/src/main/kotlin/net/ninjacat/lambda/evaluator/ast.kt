@@ -25,7 +25,7 @@ sealed class Term {
 }
 
 /**
- * Variable AKA Value. Contains variable name and it's De Bruijn index
+ * Variable AKA Identifier. Contains variable name and it's De Bruijn index
  */
 data class Variable(val name: String, val bindingIndex: Int) : Term() {
     override fun toString(): String = "$name[$bindingIndex]"

@@ -150,7 +150,7 @@ class Lexer(private val reader: Reader) {
                             Token.`var`(name.toString())
                         }
                     }
-                    else -> throw ParsingException("Unexpected token '${c.toChar()}'")
+                    else -> throw LexerException("Unexpected token '${c.toChar()}'", position)
                 }
             )
             c = readSkippingWhitespace()

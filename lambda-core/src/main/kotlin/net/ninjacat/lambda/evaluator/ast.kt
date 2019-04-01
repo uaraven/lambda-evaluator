@@ -91,7 +91,7 @@ data class Assignment(val variable: Variable, val value: Term) : Term() {
 /**
  * Lambda abstraction
  */
-data class Abstraction(private val param: Variable, internal val body: Term) : Term() {
+data class Abstraction(val param: Variable, val body: Term) : Term() {
     private val strRepr = lazy {
         "λ$param.$body"
     }

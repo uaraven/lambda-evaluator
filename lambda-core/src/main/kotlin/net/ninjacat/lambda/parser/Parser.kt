@@ -41,12 +41,12 @@ class Parser(tokens: Sequence<Token>) {
     private fun parseLambda(shouldAccept: (Token) -> Boolean, context: BindingContext): Abstraction {
         val t = readNext()
         if (!shouldAccept(t) || t.type != TokenType.VARIABLE) {
-            throw ParsingException("Identifier expected, but '$t' found")
+            throw ParsingException("Identifier expected, but '$t' found", t.position)
         }
         val id = Variable.parameter(t.value)
         val dot = readNext()
         if (!shouldAccept(dot) || dot.type != TokenType.DOT) {
-            throw ParsingException("'.' expected, but '$t' found")
+            throw ParsingException("'.' expected, but '$t' found", t.position)
         }
         val body = parseTerm(shouldAccept, listOf(id.name) + context)
         return Abstraction.of(id).`as`(body)
@@ -75,11 +75,11 @@ class Parser(tokens: Sequence<Token>) {
     private fun parseAssignment(context: BindingContext): Term {
         val lhs = readNext()
         if (lhs.type != TokenType.VARIABLE) {
-            throw ParsingException("Expected variable name, but found $lhs")
+            throw ParsingException("Expected variable name, but found $lhs", lhs.position)
         }
         val assign = readNext()
         if (assign.type != TokenType.ASSIGN) {
-            throw ParsingException("Expected ':=', but found $assign")
+            throw ParsingException("Expected ':=', but found $assign", assign.position)
         }
         val rhs = parseTerm(this::nonEof, context)
         return Assignment(Variable.parameter(lhs.value), rhs)
@@ -91,14 +91,18 @@ class Parser(tokens: Sequence<Token>) {
         return when {
             token.type == TokenType.OPEN_PARENS -> parseTerm(this::nonClose, context)
             token.type == TokenType.VARIABLE -> Variable(token.value, context.indexOf(token.value))
-            else -> throw ParsingException("Expected variable or '(', but found $token")
+            else -> throw ParsingException("Expected variable or '(', but found $token", token.position)
         }
     }
 
     private fun nonEof(t: Token) = t.type != TokenType.EOF
     private fun nonClose(t: Token) = t.type != TokenType.CLOSE_PARENS
 
-    private fun readNext(): Token = if (buffer.isNotEmpty()) buffer.pop() else reader.next()
+    private fun readNext(): Token = if (buffer.isNotEmpty()) buffer.pop() else try {
+        reader.next()
+    } catch (ex: NoSuchElementException) {
+        throw ParsingException("Unexpected end of expression", -1)
+    }
 
     private fun putBack(c: Token) = buffer.push(c)
 

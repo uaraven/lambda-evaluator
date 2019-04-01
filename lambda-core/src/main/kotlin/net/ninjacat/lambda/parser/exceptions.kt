@@ -1,6 +1,8 @@
 package net.ninjacat.lambda.parser
 
-class ParsingException(message: String): Exception(message)
+sealed class SyntaxException(message: String, val position: Int): Exception(message)
 
-data class LexerException(override val message: String, val position: Int):
-    Exception("Lexer error at position $position: $message")
+class ParsingException(message: String, position: Int): SyntaxException(message, position)
+
+class LexerException(message: String, position: Int):
+    SyntaxException("Lexer error at position $position: $message", position)

@@ -2,9 +2,10 @@ package net.ninjacat.lambda.parser
 
 import java.io.Reader
 import java.util.*
-import kotlin.math.exp
-import kotlin.text.StringBuilder
 
+/**
+ * Valid tokens
+ */
 enum class TokenType {
     LAMBDA,
     DOT,
@@ -15,6 +16,10 @@ enum class TokenType {
     EOF
 }
 
+
+/**
+ * Token produced by Lexer
+ */
 data class Token(val type: TokenType, val value: String) {
     override fun toString(): String = "'$value'"
 
@@ -30,7 +35,7 @@ data class Token(val type: TokenType, val value: String) {
 }
 
 /**
- * Holds current state of lambda parameter parsing, allowing to unwrap "multiparameter" lambda expressions
+ * Holds current state of lambda parameter parsing, allowing to normalize "multiparameter" lambda expressions
  *
  * λxyz.xyz -> λx.λy.λz.xyz
  */
@@ -39,7 +44,6 @@ private data class LambdaUnwrapperState(
     private var paramCount: Int,
     private var expectingDot: Boolean
 ) {
-    fun inLambda() = inLambda
 
     fun startLambda() {
         inLambda = true
@@ -81,8 +85,10 @@ private data class LambdaUnwrapperState(
 class Lexer(private val reader: Reader) {
 
     private val buffer: Deque<Int> = LinkedList<Int>()
+    private var position = 0
 
     fun tokenize(): Sequence<Token> {
+
         val tokens = mutableListOf<Token>()
         val luState = LambdaUnwrapperState.new()
         var c = readSkippingWhitespace()
@@ -112,7 +118,7 @@ class Lexer(private val reader: Reader) {
                     ':' -> {
                         val next = readNext()
                         if (next.toChar() != '=') {
-                            throw ParsingException("'=' expected, but '${next.toChar()}' found")
+                            throw LexerException("'=' expected, but '${next.toChar()}' found", position)
                         } else {
                             Token.assign
                         }
@@ -123,8 +129,8 @@ class Lexer(private val reader: Reader) {
                             luState.startLambda()
                             Token.lambda
                         } else {
-                                luState.addParameter()
-                                Token.`var`(c.toChar().toString())
+                            luState.addParameter()
+                            Token.`var`(c.toChar().toString())
                         }
                     }
                     in 'A'..'Z' -> {
@@ -140,8 +146,8 @@ class Lexer(private val reader: Reader) {
                                 t = readNext()
                             }
                             putBack(t)
-                                luState.addParameter()
-                                Token.`var`(name.toString())
+                            luState.addParameter()
+                            Token.`var`(name.toString())
                         }
                     }
                     else -> throw ParsingException("Unexpected token '${c.toChar()}'")
@@ -153,19 +159,29 @@ class Lexer(private val reader: Reader) {
         return tokens.asSequence()
     }
 
+    /**
+     * Reads next character from the input reader
+     *
+     * Skips whitespace and converts backslash '\' into λ
+     */
     private fun readSkippingWhitespace(): Int {
         var c = readNext()
         while (whitespace.contains(c)) {
             c = readNext()
         }
         return if (c.toChar() == '\\') {
-             'λ'.toInt()
+            'λ'.toInt()
         } else {
             c
         }
     }
 
-    private fun readNext(): Int = if (buffer.isNotEmpty()) buffer.pop() else reader.read()
+    private fun readNext(): Int = if (buffer.isNotEmpty()) {
+        buffer.pop()
+    } else {
+        position += 1
+        reader.read()
+    }
 
     private fun putBack(c: Int) = buffer.push(c)
 

@@ -69,6 +69,9 @@ class Parser(tokens: Sequence<Token>) {
         }
     }
 
+    /**
+     * Parses assignment expression
+     */
     private fun parseAssignment(context: BindingContext): Term {
         val lhs = readNext()
         if (lhs.type != TokenType.VARIABLE) {

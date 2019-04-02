@@ -3,7 +3,9 @@ package net.ninjacat.lambda.evaluator
 import net.ninjacat.lambda.parser.Parser
 import org.hamcrest.Matchers
 import org.hamcrest.Matchers.equalTo
+import org.hamcrest.Matchers.hasSize
 import org.junit.Assert.assertThat
+import org.junit.Ignore
 import org.junit.Test
 import kotlin.math.exp
 
@@ -16,8 +18,8 @@ class EvaluatorTest {
 
         val final = evaluator.eval(expr)
 
-        assertThat(final, Matchers.hasSize(1))
-        assertThat(final.first(), equalTo(Variable("a", -1) as Term))
+        assertThat(final, Matchers.hasSize(2))
+        assertThat(final.last(), equalTo(Variable("a", -1) as Term))
     }
 
     @Test
@@ -28,7 +30,7 @@ class EvaluatorTest {
         val final = evaluator.eval(expr)
         val expected: Term = Application(Variable("a", -1), Variable("b", -1))
 
-        assertThat(final, Matchers.hasSize(2))
+        assertThat(final, Matchers.hasSize(3))
         assertThat(final.last(), equalTo(expected))
     }
 
@@ -44,6 +46,15 @@ class EvaluatorTest {
         )
 
         assertThat(final.last(), equalTo(expected))
+    }
+
+    @Test
+    fun shouldEvaluateYCombinator() {
+        val expr = Parser.parse("(λg.( λx.g(xx) ) ( λx.g(xx) ))(a)")
+        val evaluator = Evaluator()
+
+        val result = evaluator.eval(expr)
+        assertThat(result, hasSize(16))
     }
 
     @Test

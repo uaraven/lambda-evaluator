@@ -1,19 +1,16 @@
 package net.ninjacat.lambda.repl.cli
 
 import net.ninjacat.lambda.evaluator.Evaluator
-import org.jline.terminal.Terminal
-import org.jline.terminal.TerminalBuilder
-import java.io.IOException
-import org.jline.reader.impl.history.DefaultHistory
-import org.jline.reader.History
-import org.jline.reader.LineReader
-import org.jline.reader.LineReaderBuilder
-import org.jline.reader.UserInterruptException
-import jdk.nashorn.internal.runtime.ScriptingFunctions.readLine
 import net.ninjacat.lambda.evaluator.Term
 import net.ninjacat.lambda.parser.Parser
 import net.ninjacat.lambda.parser.SyntaxException
 import org.fusesource.jansi.Ansi
+import org.jline.reader.*
+import org.jline.reader.impl.DefaultParser
+import org.jline.reader.impl.history.DefaultHistory
+import org.jline.terminal.Terminal
+import org.jline.terminal.TerminalBuilder
+import java.io.IOException
 
 
 class Repl(parameters: Parameters) {
@@ -22,13 +19,8 @@ class Repl(parameters: Parameters) {
     } catch (ex: Exception) {
         buildFallbackTerminal()
     }
-    private val history = createHistory()
 
-    private val reader = LineReaderBuilder.builder()
-        .option(LineReader.Option.AUTO_REMOVE_SLASH, false)
-        .terminal(terminal)
-        .history(this.history)
-        .build()
+    private val reader = createLineReader(terminal)
 
     private val evaluator = Evaluator()
 
@@ -39,6 +31,12 @@ class Repl(parameters: Parameters) {
         return history
     }
 
+    private fun createParser(): org.jline.reader.Parser {
+        val parser = DefaultParser()
+        parser.escapeChars = charArrayOf()
+        return parser
+    }
+
     private fun isDumb(parameters: Parameters): Boolean {
         return System.console() == null || parameters.noColor
     }
@@ -47,6 +45,7 @@ class Repl(parameters: Parameters) {
     private fun buildDefaultTerminal(parameters: Parameters): Terminal {
         return TerminalBuilder.builder()
             .dumb(isDumb(parameters))
+            .jansi(true)
             .build()
     }
 
@@ -58,11 +57,28 @@ class Repl(parameters: Parameters) {
             .build()
     }
 
+    private fun createLineReader(terminal: Terminal): LineReader {
+        return LineReaderBuilder.builder()
+            .terminal(terminal)
+            .option(LineReader.Option.AUTO_GROUP, false)
+            .option(LineReader.Option.AUTO_LIST, false)
+            .option(LineReader.Option.AUTO_MENU, false)
+            .history(createHistory())
+            .parser(createParser())
+            .appName("λ(λ)")
+            .build()
+    }
+
     fun repl() {
         while (true) {
             val line = try {
                 this.reader.readLine(prompt)
             } catch (ignored: UserInterruptException) {
+                continue
+            } catch (ignored2: EndOfFileException) {
+                break
+            }
+            if (line.trim().isEmpty()) {
                 continue
             }
             val resultPair = try {
@@ -72,7 +88,7 @@ class Repl(parameters: Parameters) {
             } catch (ex: SyntaxException) {
                 if (ex.position >= 0) {
                     println(line)
-                    println(" ".repeat(ex.position - 1) + "^")
+                    print(" ".repeat(ex.position - 1) + "^ ")
                 }
                 println(Ansi().fgBrightRed().a(ex.message).reset())
                 continue
@@ -85,12 +101,16 @@ class Repl(parameters: Parameters) {
     }
 
     private fun printAst(ast: Term) {
-        println()
+        print(parsedPrompt)
         AstPrinter(ast).printAst()
     }
 
     private fun printSteps(ast: Term, steps: List<Term>) {
-        println("Steps to normal form:")
+        if (!steps.isEmpty()) {
+            print(resultPrompt)
+            printAst(steps.last())
+        }
+        print(stepsPrompt)
         if (steps.isEmpty()) {
             printAst(ast)
         } else {
@@ -99,6 +119,9 @@ class Repl(parameters: Parameters) {
     }
 
     companion object {
-        val prompt = " > "
+        const val prompt = " > "
+        const val parsedPrompt = "   Parsed expression: "
+        const val resultPrompt = "Evaluated expression: "
+        const val stepsPrompt = " Steps to normal form:\n"
     }
 }

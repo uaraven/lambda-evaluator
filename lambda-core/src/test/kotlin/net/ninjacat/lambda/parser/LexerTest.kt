@@ -69,7 +69,7 @@ class LexerTest {
 
     @Test
     fun shouldTokenizeYCombinator() {
-        val lexer = Lexer(StringReader(" λg.( λx.g(xx) ) ( λx.g(xx) )"))
+        val lexer = Lexer(StringReader("λg.( λx.g(xx) ) ( λx.g(xx) )"))
         val tokens = lexer.tokenize().toList()
         val expected = listOf(
             Token.lambda(),

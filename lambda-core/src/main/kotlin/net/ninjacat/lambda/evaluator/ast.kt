@@ -28,7 +28,7 @@ sealed class Term {
  * Variable AKA Identifier. Contains variable name and it's De Bruijn index
  */
 data class Variable(val name: String, val bindingIndex: Int) : Term() {
-    override fun toString(): String = "$name[$bindingIndex]"
+    override fun toString(): String = if (bindingIndex >= 0) "$name[$bindingIndex]" else "$name"
 
     override fun repr(): String = name
 
@@ -144,7 +144,9 @@ data class Application(val a: Term, val b: Term) : Term() {
         if (a is Abstraction) "($a)($b)" else "$a$b"
     }
     private val repr = lazy {
-        if (a is Abstraction) "(${a.repr()})(${b.repr()})" else "${a.repr()}${b.repr()}"
+        val astr = if (a is Variable) a.repr() else "(${a.repr()})"
+        val bstr = if (b is Variable) b.repr() else "(${b.repr()})"
+        "$astr$bstr"
     }
     override fun shift(by: Int, from: Int): Application = Application(
         a.shift(by, from),

@@ -15,8 +15,9 @@ class Evaluator {
             if (results.isEmpty()) {
                 results.add(lastEvaluated)
             }
-            context[term.variable.name] = evaluationStep(results.last())
+            context[term.variable.name] = lastEvaluated
         } else {
+            results.add(term)
             internalEval(term, results)
         }
         return results.toList()
@@ -25,6 +26,9 @@ class Evaluator {
     fun getNamed(name: String): Term? = context[name]
 
     private fun internalEval(term: Term, result: MutableList<Term>): Term {
+        if (result.size > recursionLimit) {
+            return result.last()
+        }
         val evaluated = evaluationStep(term)
         return if (evaluated == term) {
             evaluated
@@ -54,5 +58,9 @@ class Evaluator {
             }
             else -> root
         }
+    }
+
+    companion object {
+        const val recursionLimit = 15
     }
 }

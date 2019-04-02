@@ -16,21 +16,39 @@ enum class TokenType {
     EOF
 }
 
-
 /**
  * Token produced by Lexer
  */
-data class Token(val type: TokenType, val value: String) {
+data class Token(val type: TokenType, val value: String, val position: Int) {
     override fun toString(): String = "'$value'"
 
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as Token
+
+        if (type != other.type) return false
+        if (value != other.value) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = type.hashCode()
+        result = 31 * result + value.hashCode()
+        return result
+    }
+
+
     companion object {
-        val lambda = Token(TokenType.LAMBDA, "λ")
-        val dot = Token(TokenType.DOT, ".")
-        val openParens = Token(TokenType.OPEN_PARENS, "(")
-        val closeParens = Token(TokenType.CLOSE_PARENS, ")")
-        val assign = Token(TokenType.ASSIGN, ":=")
-        fun `var`(name: String) = Token(TokenType.VARIABLE, name)
-        val eof: Token = Token(TokenType.EOF, "<eof>")
+        fun lambda(pos: Int = -1) = Token(TokenType.LAMBDA, "λ", pos)
+        fun dot(pos: Int = -1) = Token(TokenType.DOT, ".", pos)
+        fun openParens(pos: Int = -1) = Token(TokenType.OPEN_PARENS, "(", pos)
+        fun closeParens(pos: Int = -1) = Token(TokenType.CLOSE_PARENS, ")", pos)
+        fun assign(pos: Int = -1) = Token(TokenType.ASSIGN, ":=", pos)
+        fun `var`(name: String, pos: Int = -1) = Token(TokenType.VARIABLE, name, pos)
+        val eof: Token = Token(TokenType.EOF, "<eof>", -1)
     }
 }
 
@@ -94,50 +112,50 @@ class Lexer(private val reader: Reader) {
         var c = readSkippingWhitespace()
         while (c != -1) {
             if (luState.generateDot() && c.toChar() != '.') {
-                tokens.add(Token.dot)
+                tokens.add(Token.dot(position))
                 luState.clearDot()
             }
             tokens.add(
                 when (c.toChar()) {
                     'λ' -> {
                         luState.startLambda()
-                        Token.lambda
+                        Token.lambda(position)
                     }
                     '.' -> {
                         luState.endLambda()
-                        Token.dot
+                        Token.dot(position)
                     }
                     '(' -> {
                         luState.endLambda()
-                        Token.openParens
+                        Token.openParens(position)
                     }
                     ')' -> {
                         luState.endLambda()
-                        Token.closeParens
+                        Token.closeParens(position)
                     }
                     ':' -> {
                         val next = readNext()
                         if (next.toChar() != '=') {
                             throw LexerException("'=' expected, but '${next.toChar()}' found", position)
                         } else {
-                            Token.assign
+                            Token.assign(position)
                         }
                     }
                     in 'a'..'z' -> {
                         if (luState.isSecondParameter()) {
                             putBack(c)
                             luState.startLambda()
-                            Token.lambda
+                            Token.lambda(position)
                         } else {
                             luState.addParameter()
-                            Token.`var`(c.toChar().toString())
+                            Token.`var`(c.toChar().toString(), position)
                         }
                     }
                     in 'A'..'Z' -> {
                         if (luState.isSecondParameter()) {
                             putBack(c)
                             luState.startLambda()
-                            Token.lambda
+                            Token.lambda(position)
                         } else {
                             var t = c
                             val name = StringBuilder()
@@ -147,10 +165,10 @@ class Lexer(private val reader: Reader) {
                             }
                             putBack(t)
                             luState.addParameter()
-                            Token.`var`(name.toString())
+                            Token.`var`(name.toString(), position)
                         }
                     }
-                    else -> throw ParsingException("Unexpected token '${c.toChar()}'")
+                    else -> throw LexerException("Unexpected token '${c.toChar()}'", position)
                 }
             )
             c = readSkippingWhitespace()

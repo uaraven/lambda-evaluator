@@ -115,6 +115,33 @@ class ParserTest {
     }
 
     @Test
+    fun shouldParseYCombinator() {
+        val root = Parser.parse(" λg.( λx.g(xx) ) ( λx.g(xx) )")
+        val expected = Abstraction.of("g").`as`(
+            Application(
+                Abstraction
+                    .of("x")
+                    .`as`(
+                        Application(
+                            Variable("g", 1),
+                            Application(Variable("x", 0), Variable("x", 0))
+                        )
+                    ),
+                Abstraction
+                    .of("x")
+                    .`as`(
+                        Application(
+                            Variable("g", 1),
+                            Application(Variable("x", 0), Variable("x", 0))
+                        )
+                    )
+            )
+        )
+
+        assertThat(root, equalTo(expected as Term))
+    }
+
+    @Test
     fun testDeBruijnIndex() {
         val term = Parser.parse("(\\xyz.xyz)a")
         val expected = Application.of(
@@ -128,4 +155,22 @@ class ParserTest {
 
         assertThat(term, equalTo(expected))
     }
+
+    @Test(expected = ParsingException::class)
+    fun shouldFailExpectingVariable() {
+        Parser.parse("\\(x).x")
+    }
+
+    @Test(expected = ParsingException::class)
+    fun shouldFailExpectingDot() {
+        val tokens = listOf(
+            Token.lambda(),
+            Token.`var`("x"),
+            Token.`var`("p"),
+            Token.dot(),
+            Token.`var`("x")
+        )
+        Parser(tokens.asSequence()).parse()
+    }
+
 }

@@ -81,9 +81,9 @@ Evaluator will automatically perform alpha-conversion and rename conflicting par
 ## Project structure
 
 * lambda-core - lexer, parser and evaluator of lambda expressions
-* lambda-repl - CLI-based REPL for lambda expressions*
-* lambda-web  - Web-based REPL for lambda expressions**
+* cli-repl    - CLI-based REPL for lambda expressions*
+* web-repl    - Web-based REPL for lambda expressions**
 
 ---
-\* To be implemented\
+\* Work in progress\
 \** To be implemented later

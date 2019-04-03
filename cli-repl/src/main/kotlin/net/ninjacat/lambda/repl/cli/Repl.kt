@@ -72,15 +72,21 @@ class Repl(parameters: Parameters) {
     fun repl() {
         while (true) {
             val line = try {
-                this.reader.readLine(prompt)
+                val ln = this.reader.readLine(prompt)
+                if (ln.trim().isEmpty()) {
+                    continue
+                }
+                if (ln.trim().startsWith(":")) {
+                    processCommand(ln)
+                    continue
+                }
+                ln
             } catch (ignored: UserInterruptException) {
                 continue
             } catch (ignored2: EndOfFileException) {
                 break
             }
-            if (line.trim().isEmpty()) {
-                continue
-            }
+
             val resultPair = try {
                 val ast = Parser.parse(line)
                 val termsToNormal = evaluator.eval(ast)
@@ -95,13 +101,18 @@ class Repl(parameters: Parameters) {
             }
             val ast = resultPair.first
             val steps = resultPair.second
+
+            print(parsedPrompt)
             printAst(ast)
             printSteps(ast, steps)
         }
     }
 
+    private fun processCommand(line: String) {
+        CommandProcessor.process(line)
+    }
+
     private fun printAst(ast: Term) {
-        print(parsedPrompt)
         AstPrinter(ast).printAst()
     }
 
@@ -112,9 +123,13 @@ class Repl(parameters: Parameters) {
         }
         print(stepsPrompt)
         if (steps.isEmpty()) {
+            print("    ")
             printAst(ast)
         } else {
-            steps.forEach { printAst(it) }
+            steps.forEach {
+                print("    ")
+                printAst(it)
+            }
         }
     }
 

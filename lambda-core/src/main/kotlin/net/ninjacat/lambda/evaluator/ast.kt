@@ -144,7 +144,7 @@ data class Application(val a: Term, val b: Term) : Term() {
         if (a is Abstraction) "($a)($b)" else "$a$b"
     }
     private val repr = lazy {
-        val astr = if (a is Variable) a.repr() else "(${a.repr()})"
+        val astr = if (a is Variable || a is Application) a.repr() else "(${a.repr()})"
         val bstr = if (b is Variable) b.repr() else "(${b.repr()})"
         "$astr$bstr"
     }

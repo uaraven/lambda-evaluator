@@ -42,16 +42,19 @@ class AstPrinter(private val root: Term) {
     }
 
     private fun printTerm(ansi: Ansi, application: Application) {
-        val doParens = application.a is Abstraction
-        if (doParens) {
+        if (application.a is Variable || application.a is Application) {
+            printTerm(ansi, application.a)
+        } else {
             ansi.a("(")
             printTerm(ansi, application.a)
-            ansi.a(")(")
+            ansi.a(")")
+        }
+        if (application.b is Variable) {
+            printTerm(ansi, application.b as Variable)
+        } else {
+            ansi.a("(")
             printTerm(ansi, application.b)
             ansi.a(")")
-        } else {
-            printTerm(ansi, application.a)
-            printTerm(ansi, application.b)
         }
     }
 

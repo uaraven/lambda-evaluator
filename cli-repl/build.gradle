@@ -21,6 +21,8 @@ dependencies {
     implementation group: 'org.jline', name: 'jline-terminal-jansi', version: jlineVersion
     implementation group: 'org.jline', name: 'jline-reader', version: jlineVersion
     implementation group: 'org.fusesource.jansi', name: 'jansi', version: '1.17.1'
+    implementation group: 'ch.qos.logback', name: 'logback-core', version: '1.1.5'
+    implementation group: 'ch.qos.logback', name: 'logback-classic', version: '1.1.5'
 
     implementation project(':lambda-core')
 }

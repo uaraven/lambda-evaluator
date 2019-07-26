@@ -13,7 +13,7 @@ Supports standard lambda notation:
 
 ### Variables
 
-Variable name can be either *one* lowercase 'a'..'z' or list of uppercase 'A'..'Z' characters.
+Variable name can be either *one* lowercase 'a'..'z' or a sequence of uppercase 'A'..'Z' characters.
 
 `x`, `y`, `z`, `ID`, `TRUE` and `FALSE` are all valid identifiers.
 
@@ -21,8 +21,7 @@ Variable name can be either *one* lowercase 'a'..'z' or list of uppercase 'A'..'
 
 ### Abstractions
 
-λ can be replaced with `\`, like `λxy.x` can be written as `\xy.x`. Abstractions of form `λxy.(...)` will be automatically
-normalized to `λx.λy.(...)`.
+λ can be replaced with `\`, for example `λxy.x` can be written as `\xy.x`. Abstractions of form `λxy.(...)` will be automatically normalized to `λx.λy.(...)`.
 
 It is highly recommended to enclose abstractions in parenthesis to avoid confusing parser.
 

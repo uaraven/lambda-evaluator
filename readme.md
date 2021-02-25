@@ -1,7 +1,7 @@
 λ calculus evaluator
 ===
 
-Base evaluator and command line REPL for lambda calculus
+Basic evaluator and command line REPL for lambda calculus
 
 ## Syntax
 
